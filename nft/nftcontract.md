@@ -535,7 +535,7 @@ public static boolean transfer(Hash160 to, ByteString tokenId, Object data) thro
         return (Iterator<Iterator.Struct<ByteString, ByteString>>) registryMap.find(FindOptions.RemovePrefix);
     }
 ```
-根据tokenId来查询NFT的详情。
+根据tokenId来查询NFT的详情,将属性从不同的`Stroage`里取出，放入`Map`中返回。
 ```java
     @Safe
     public static Map<String, String> properties(ByteString tokenId) throws Exception {
@@ -559,4 +559,158 @@ public static boolean transfer(Hash160 to, ByteString tokenId, Object data) thro
         }
         return p;
     }
+```
+## 事件
+事件可以理解把一些自己定义的日志记录到区块中，来方便查询。事件通过以下方法进行定义
+```java
+@DisplayName("Transfer")
+private static Event4Args<Hash160, Hash160, Integer, ByteString> onTransfer;
+
+@DisplayName("Mint")
+private static Event3Args<Hash160, ByteString, Map<String, String>> onMint;
+
+@DisplayName("MintNeoLine")
+private static Event3Args<Hash160, ByteString, MyStruct> onMintNeoLine;
+```
+通过`onTransfer.fire(owner, to, 1, tokenId);` `onMint.fire(owner, tokenId, properties);` `变量名.fire(xxxx)`传入参数来触发
+
+在区块中查询触发的事件：
+```bash
+Eventname:
+Mint
+VM State:
+HALT
+Contract:
+0x8bcccdceff8b30361fb50a76854bf52cf0102e0f
+State:
+ByteString: 0x40051caf48052ef3bab78b7796cf799e2c5c32f7
+ByteString: 01
+Map: {"key":{"type":"ByteString","value":"ZGVzY3JpcHRpb24="},"value":{"type":"ByteString","value":"WkdWelkzSnBjSFJwYjI0Z2JYa2dabWx5YzNRZ2MzUmhiWEE9"}},{"key":{"type":"ByteString","value":"bmFtZQ=="},"value":{"type":"ByteString","value":"YzNSaGJYQXg="}},{"key":{"type":"ByteString","value":"aW1hZ2U="},"value":{"type":"ByteString","value":"YUhSMGNEb3ZMekV5Tnk0d0xqQXVNUT09"}}
+```
+## 自定义方法
+除了规范中要求实现的方法外，还可以根据自己的需要进行添加
+`contractOwner`查询当前的合约所有者
+```java
+@Safe
+public static Hash160 contractOwner() {
+    ByteString owner = ContractMetadata.get("Owner");
+    Hash160 owner160 = new Hash160(owner);
+    return owner160;
+}
+```
+`mint`，`mintNeoLine`，`mintNeoLineStr`这3个方法，都是用来铸造一个NFT的，演示了3种不同参数的方法实现。
+接收参数，判断操作者是否是合约所有者，如果不是就停止执行。如果是合约所有者，将传递的属性放入不同的`StorageMap`中。更新关联的数据，最后触发事件。
+```java
+public static void mint(Hash160 owner,Map<String, String> properties) {
+    Integer tokenNO = totalSupply() + 1;
+    ByteString tokenId = new ByteString(tokenNO);
+    if (!Runtime.checkWitness(contractOwner())) {
+        fireErrorAndAbort("No authorization.", "mint");
+    }
+    if (!properties.containsKey(propName)) {
+        fireErrorAndAbort("The properties must contain a value for the key 'name'.", "mint");
+    }
+    String tokenName = properties.get(propName);
+    propNameMap.put(tokenId, tokenName);
+    if (properties.containsKey(propDescription)) {
+        String description = properties.get(propDescription);
+        propDescriptionMap.put(tokenId, description);
+    }
+    if (properties.containsKey(propImage)) {
+        String image = properties.get(propImage);
+        propImageMap.put(tokenId, image);
+    }
+
+    registryMap.put(tokenId, tokenId);
+    ownerOfMap.put(tokenId, owner.toByteArray());
+    new StorageMap(ctx, createTokensOfPrefix(owner)).put(tokenId, 1);
+
+    increaseBalanceByOne(owner);
+    incrementTotalSupplyByOne();
+    onMint.fire(owner, tokenId, properties);
+}
+
+@Struct
+static class MyStruct {
+    String name;
+    String image;
+    String description;
+}
+
+
+public static void mintNeoLine(Hash160 owner,Object data) {
+    MyStruct myData = (MyStruct) data;
+    Integer tokenNO = totalSupply() + 1;
+    ByteString tokenId = new ByteString(tokenNO);
+    if (!Runtime.checkWitness(contractOwner())) {
+        fireErrorAndAbort("No authorization.", "mint");
+    }
+    propNameMap.put(tokenId, myData.name);
+    propDescriptionMap.put(tokenId, myData.description);
+    propImageMap.put(tokenId, myData.image);
+
+    registryMap.put(tokenId, tokenId);
+    ownerOfMap.put(tokenId, owner.toByteArray());
+    new StorageMap(ctx, createTokensOfPrefix(owner)).put(tokenId, 1);
+
+    increaseBalanceByOne(owner);
+    incrementTotalSupplyByOne();
+    onMintNeoLine.fire(owner, tokenId, myData);
+}
+
+public static void mintNeoLineStr(Hash160 owner,String name,String image, String description) {
+    Integer tokenNO = totalSupply() + 1;
+    ByteString tokenId = new ByteString(tokenNO);
+    if (!Runtime.checkWitness(contractOwner())) {
+        fireErrorAndAbort("No authorization.", "mint");
+    }
+    propNameMap.put(tokenId, name);
+    propDescriptionMap.put(tokenId, description);
+    propImageMap.put(tokenId, image);
+
+    registryMap.put(tokenId, tokenId);
+    ownerOfMap.put(tokenId, owner.toByteArray());
+    new StorageMap(ctx, createTokensOfPrefix(owner)).put(tokenId, 1);
+
+    increaseBalanceByOne(owner);
+    incrementTotalSupplyByOne();
+    MyStruct myData = new MyStruct();
+    myData.image=image;
+    myData.name=name;
+    myData.description=description;
+    onMintNeoLine.fire(owner, tokenId, myData);
+}
+```
+## 辅助方法
+```java
+private static int getBalance(Hash160 owner) {
+        return balanceMap.getIntOrZero(owner.toByteArray());
+    }
+
+private static void fireErrorAndAbort(String msg, String method) {
+    error.fire(msg, method);
+    Helper.abort();
+}
+
+private static void increaseBalanceByOne(Hash160 owner) {
+    balanceMap.put(owner.toByteArray(), getBalance(owner) + 1);
+}
+
+private static void decreaseBalanceByOne(Hash160 owner) {
+    balanceMap.put(owner.toByteArray(), getBalance(owner) - 1);
+}
+
+private static void incrementTotalSupplyByOne() {
+    int updatedTotalSupply = contractMap.getInt(totalSupplyKey) + 1;
+    contractMap.put(totalSupplyKey, updatedTotalSupply);
+}
+
+private static void decrementTotalSupplyByOne() {
+    int updatedTotalSupply = contractMap.getInt(totalSupplyKey) - 1;
+    contractMap.put(totalSupplyKey, updatedTotalSupply);
+}
+
+private static byte[] createTokensOfPrefix(Hash160 owner) {
+    return Helper.concat(tokensOfKey, owner.toByteArray());
+}
 ```
