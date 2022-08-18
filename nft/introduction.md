@@ -9,4 +9,10 @@
  1. 存储到中心化的服务器中，将图片的url访问地址存储到合约中。
  2. 保存到去中心化的NeoFs中，将图片的url访问地址存储到合约中。
  3. 将图片格式化成Base64直接存储到合约中（需要足够的小才行）。
+ ## 完整效果
+<video id="video" controls="controls" preload="none"  width="800" height="600">
+      <source id="mp4" src="../images/nftsystem/20220804101028.mp4" type="video/mp4">
+</video>
+
+点击播放按钮播放，全屏按钮全屏观看
 

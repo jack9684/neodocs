@@ -1,5 +1,5 @@
 # NEP-11 (NFT)合约开发
-
+我们在下载好的合约框架中，编写我们的合约，在`src/main/java/com.axlabs.boilerplate`目录下新建`StampToken`类。
 [这是nep-11的规范](https://github.com/neo-project/proposals/blob/master/nep-11.mediawiki)一定要遵守。
 ## 完整代码
 ```java

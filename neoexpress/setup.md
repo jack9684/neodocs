@@ -16,7 +16,7 @@
 
 ![](../images/neoexpress/devtracker2.png) 
 
-在私有节点上点击右键，你可以看到很多操作，常用的有:
+在私有节点上(default.neo-express)点击右键，你可以看到很多操作，常用的有:
 - Create wallet  创建用户
 - Transfer assets.就是发送gas/neo给新用户
 - Invoke  contract 是触发合约

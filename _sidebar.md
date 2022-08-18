@@ -8,7 +8,7 @@
   - [项目介绍](nft/introduction.md)
   - [合约部署](nft/contract.md)
   - [合约开发](nft/nftcontract.md)
-
+  - [应用开发](nft/nftsystem.md)
 
 - Javadoc
   - [io.neow3j:core](https://javadoc.io/doc/io.neow3j/core/latest/index.html)

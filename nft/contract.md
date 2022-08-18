@@ -8,7 +8,7 @@ git checkout quickstart-tutorial
 
 ## 单独编译合约代码
 
-在Idea中打开下载好的项目，项目中自带了一个最简单的合约代码`HelloWorldSmartContract.java`，查看目录结构
+在Idea中打开下载好的项目，项目中自带了一个最简单的合约代码`HelloWorldSmartContract.java`，`Deployment.java`是发布部署合约的可用程序，`stampToken.java`是我们自己编写的合约程序。查看目录结构
 
 ![](../images/nft/contract1.png)
 
@@ -41,7 +41,7 @@ neow3jCompiler {
 ```java
      CompilationUnit res = new Compiler().compile(HelloWorldSmartContract.class.getCanonicalName(), substitutions);
 ```
-`HelloWorldSmartContract.class.getCanonicalName()`修改为自己编写的新的合约JAVA类。
+`HelloWorldSmartContract.class.getCanonicalName()`以后修改为自己编写的新合约JAVA类，我们第一次发布就先用默认的`HelloWorldSmartContract.java`。
 
 ### 从NeoExpress中获取Gas
 因为发布合约需要支付Gas费用，要在代码中修改发布者的秘钥WIF，NODE是Neo-Express服务地址，默认不需要修改。
