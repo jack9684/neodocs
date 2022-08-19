@@ -10,5 +10,16 @@ private static final String NODE = "http://seed1t4.neo.org:20332";
 // private static final String NODE = "http://localhost:50012";
 ```
 修改完毕后`run`,由于合约没有进行更改，所以生成的合约地址和NEOEXPRESS是一样的。
+部署完毕后查看详情：
 
+[测试网查看部署详情](https://n3t4.neotube.io/contract/0xf9d9d671380fa8c07d9e62480784ee47acbd67e6)
+
+修改代码中相应的NEOEXPRSS私有网络地址，为测试网。进行测试。再按照相同方法发布至主网。
+```java
+public class Constants {
+    // This sets up the connection to the neo-node of our private network.
+    //public static Neow3j NEOW3J = Neow3j.build(new HttpService("http://localhost:50012", true));
+    //TestNet
+    public static Neow3j NEOW3J = Neow3j.build(new HttpService("http://seed2.neo.org:20332", true));
+```    
 
