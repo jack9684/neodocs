@@ -105,7 +105,7 @@ public class StampToken {
             throw new Exception("The parameter 'owner' must be a 20-byte address.");
         }
         return (Iterator<ByteString>) Storage.find(Storage.getReadOnlyContext(), createTokensOfPrefix(owner),
-                FindOptions.ValuesOnly);
+                (byte)(FindOptions.KeysOnly | FindOptions.RemovePrefix));
     }
 
     public static boolean transfer(Hash160 to, ByteString tokenId, Object data) throws Exception {
@@ -205,7 +205,7 @@ public class StampToken {
 
         ownerOfMap.put(tokenId, owner.toByteArray());
 
-        new StorageMap(ctx, tokensOfKey).put(owner.toByteArray(), tokenId);
+        new StorageMap(ctx, createTokensOfPrefix(owner)).put(tokenId, 1);
 
         increaseBalanceByOne(owner);
         incrementTotalSupplyByOne();
