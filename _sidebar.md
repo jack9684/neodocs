@@ -1,3 +1,10 @@
+- 区块链基础知识
+  - [区块链是什么](BlockchainBasics/00-introduction.md)
+  - [区块链概述](BlockchainBasics/01-overview.md)
+  - [基本概念](BlockchainBasics/02-basic-knowledge.md)
+  - [共识机制](BlockchainBasics/03-consensus-alogrithm.md)
+  - [智能合约](BlockchainBasics/04-smart-contract.md)
+
 - NEO-Express的安装使用
 
   - [neoexpress介绍](neoexpress/introduction.md)
