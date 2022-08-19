@@ -14,5 +14,16 @@
       <source id="mp4" src="../images/nftsystem/20220804101028.mp4" type="video/mp4">
 </video>
 
+<video id="video" controls="controls" preload="none"  width="800" height="600">
+      <source id="mp4" src="/images/nftsystem/20220804101028.mp4" type="video/mp4">
+</video>
+
+<video id="video" controls="controls" preload="none"  width="800" height="600">
+      <source id="mp4" src="./../images/nftsystem/20220804101028.mp4" type="video/mp4">
+</video>
+
+<video id="video" controls="controls" preload="none"  width="800" height="600">
+      <source id="mp4" src="./" type="video/mp4">
+</video>
 点击播放按钮播放，全屏按钮全屏观看
 
