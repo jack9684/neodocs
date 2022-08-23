@@ -1,5 +1,5 @@
 # NEP-11 (NFT)合约开发
-我们在下载好的合约框架中，编写我们的合约，在`src/main/java/com.axlabs.boilerplate`目录下新建`StampToken`类。
+
 [这是nep-11的规范](https://github.com/neo-project/proposals/blob/master/nep-11.mediawiki)一定要遵守。
 ## 完整代码
 ```java
@@ -18,9 +18,10 @@ import io.neow3j.devpack.events.Event2Args;
 import io.neow3j.devpack.events.Event3Args;
 import io.neow3j.devpack.events.Event4Args;
 
-//你合约Token的名字,如果设置默认使用类的名字
+import java.util.HashMap;
+
+//你合约Token的名字,如果未设置默认使用类的名字
 @DisplayName("StampToken")
-//@ManifestExtra.ManifestExtras({@ManifestExtra(key = "author", value = "jackcao"),@ManifestExtra(key = "email", value = "cjcjcjcjcj9684@163.com")})
 //额外说明信息这些信息会在manifest中看到
 @ManifestExtra(key = "author", value = "jackcao")
 @ManifestExtra(key = "email", value = "cjcjcjcjcj9684@163.com")
@@ -31,26 +32,14 @@ import io.neow3j.devpack.events.Event4Args;
 public class StampToken {
 
     static final StorageContext ctx = Storage.getStorageContext();
-    //存储totalSupply
-    static final StorageMap contractMap = new StorageMap(ctx, 0);
     //存储已发行的NFT的tokenid
     static final StorageMap registryMap = new StorageMap(ctx, 1);
     //存储tokenid的归属关系
     static final StorageMap ownerOfMap = new StorageMap(ctx, 2);
     //存储每个用户拥有的NFT个数
     static final StorageMap balanceMap = new StorageMap(ctx, 3);
-    //存储合约的所有者，只有合约的所有者才能操作一些特殊功能，比如发行制作NFT
-    static final StorageMap ContractMetadata =  new StorageMap(ctx, 4);
-    // region keys of key-value pairs in NFT properties
-    //NFT的三个属性，名称，描述，图片
-    static final String propName = "name";
-    static final String propDescription = "description";
-    static final String propImage = "image";
 
-    static final StorageMap propNameMap = new StorageMap(ctx, 8);
-    static final StorageMap propDescriptionMap = new StorageMap(ctx, 9);
-    static final StorageMap propImageMap = new StorageMap(ctx, 10);
-
+    static final byte[] contractOwnerKey = new byte[]{0x12};
     static final byte[] totalSupplyKey = new byte[]{0x10};
     static final byte[] tokensOfKey = new byte[]{0x11};
 
@@ -59,33 +48,29 @@ public class StampToken {
 
     @OnDeployment
     public static void deploy(Object data, boolean update) {
+        if (update) return;
+
         Transaction Tx = (Transaction) Runtime.getScriptContainer();
-        if (!update) {
-            ContractMetadata.put("Owner", Tx.sender.toByteString());
-            contractMap.put(totalSupplyKey, 0);
-        }
+        Storage.put(Storage.getStorageContext(), contractOwnerKey, Tx.sender.toByteArray());
+        Storage.put(Storage.getStorageContext(), totalSupplyKey, 0);
     }
 
     public static void update(ByteString script, String manifest) throws Exception {
-        ByteString owner = ContractMetadata.get("Owner");
-        Hash160 owner160 = new Hash160(owner);
+        Hash160 owner160 = Storage.getHash160(Storage.getReadOnlyContext(), contractOwnerKey);
+
         if (!Runtime.checkWitness(owner160)) {
-//            error.fire("No authorization", "update");
-//            Helper.abort();
             throw new Exception("No authorization.update");
         }
-        ContractManagement.update(script, manifest);
+        new ContractManagement().update(script, manifest);
     }
 
     public static void destroy() throws Exception {
-        ByteString owner = ContractMetadata.get("Owner");
-        Hash160 owner160 = new Hash160(owner);
+        Hash160 owner160 = Storage.getHash160(Storage.getReadOnlyContext(), contractOwnerKey);
+
         if (!Runtime.checkWitness(owner160)) {
-//            error.fire("No authorization", "destroy");
-//            Helper.abort();
             throw new Exception("No authorization.destroy");
         }
-        ContractManagement.destroy();
+        new ContractManagement().destroy();
     }
 
     // endregion deploy, update, destroy
@@ -119,8 +104,8 @@ public class StampToken {
         if (!Hash160.isValid(owner)) {
             throw new Exception("The parameter 'owner' must be a 20-byte address.");
         }
-        return (Iterator<ByteString>) Storage.find(ctx.asReadOnly(), createTokensOfPrefix(owner),
-                (byte) (FindOptions.KeysOnly | FindOptions.RemovePrefix));
+        return (Iterator<ByteString>) Storage.find(Storage.getReadOnlyContext(), createTokensOfPrefix(owner),
+                (byte)(FindOptions.KeysOnly | FindOptions.RemovePrefix));
     }
 
     public static boolean transfer(Hash160 to, ByteString tokenId, Object data) throws Exception {
@@ -134,7 +119,6 @@ public class StampToken {
         if (!Runtime.checkWitness(owner)) {
             return false;
         }
-        onTransfer.fire(owner, to, 1, tokenId);
         if (owner != to) {
             ownerOfMap.put(tokenId, to.toByteArray());
 
@@ -144,7 +128,8 @@ public class StampToken {
             decreaseBalanceByOne(owner);
             increaseBalanceByOne(to);
         }
-        if (ContractManagement.getContract(to) != null) {
+        onTransfer.fire(owner, to, 1, tokenId);
+        if (new ContractManagement().getContract(to) != null) {
             Contract.call(to, "onNEP11Payment", CallFlags.All, new Object[]{owner, 1, tokenId, data});
         }
         return true;
@@ -168,8 +153,8 @@ public class StampToken {
     // region optional NEP-11 methods
 
     @Safe
-    public static Iterator<Iterator.Struct<ByteString, ByteString>> tokens() {
-        return (Iterator<Iterator.Struct<ByteString, ByteString>>) registryMap.find(FindOptions.RemovePrefix);
+    public static Iterator<ByteString> tokens() {
+        return (Iterator<ByteString>) registryMap.find(FindOptions.ValuesOnly);
     }
 
     @Safe
@@ -177,33 +162,21 @@ public class StampToken {
         if (tokenId.length() > 64) {
             throw new Exception("The parameter 'tokenId' must be a valid NFT ID (64 or less bytes long).");
         }
-        Map<String, String> p = new Map<>();
-        ByteString tokenName = propNameMap.get(tokenId);
-        if (tokenName == null) {
+        ByteString token = registryMap.get(tokenId);
+        if (token == null) {
             throw new Exception("This token id does not exist.");
         }
-
-        p.put(propName, tokenName.toString());
-        ByteString tokenDescription = propDescriptionMap.get(tokenId);
-        if (tokenDescription != null) {
-            p.put(propDescription, tokenDescription.toString());
-        }
-        ByteString tokenImage = propImageMap.get(tokenId);
-        if (tokenImage != null) {
-            p.put(propImage, tokenImage.toString());
-        }
+        TokenState tokenState = (TokenState) new StdLib().deserialize(token);
+        Map<String, String> p = new Map<>();
+        p.put("name", tokenState.name);
+        p.put("image", tokenState.image);
+        p.put("desc", tokenState.desc);
         return p;
     }
 
 
     // endregion optional NEP-11 methods
     // region events
-
-    @DisplayName("Mint")
-    private static Event3Args<Hash160, ByteString, Map<String, String>> onMint;
-
-    @DisplayName("MintNeoLine")
-    private static Event3Args<Hash160, ByteString, MyStruct> onMintNeoLine;
 
     @DisplayName("Transfer")
     private static Event4Args<Hash160, Hash160, Integer, ByteString> onTransfer;
@@ -218,89 +191,32 @@ public class StampToken {
 
     @Safe
     public static Hash160 contractOwner() {
-        ByteString owner = ContractMetadata.get("Owner");
-        Hash160 owner160 = new Hash160(owner);
-        return owner160;
+        return Storage.getHash160(Storage.getReadOnlyContext(), contractOwnerKey);
     }
 
-    public static void mint(Hash160 owner,Map<String, String> properties) {
-        Integer tokenNO = totalSupply() + 1;
-        ByteString tokenId = new ByteString(tokenNO);
+    public static void mint(Hash160 owner, TokenState tokenState) {
         if (!Runtime.checkWitness(contractOwner())) {
             fireErrorAndAbort("No authorization.", "mint");
         }
-        if (!properties.containsKey(propName)) {
-            fireErrorAndAbort("The properties must contain a value for the key 'name'.", "mint");
-        }
-        String tokenName = properties.get(propName);
-        propNameMap.put(tokenId, tokenName);
-        if (properties.containsKey(propDescription)) {
-            String description = properties.get(propDescription);
-            propDescriptionMap.put(tokenId, description);
-        }
-        if (properties.containsKey(propImage)) {
-            String image = properties.get(propImage);
-            propImageMap.put(tokenId, image);
-        }
+        Integer tokenNO = totalSupply() + 1;
+        ByteString tokenId = new ByteString(tokenNO);
 
-        registryMap.put(tokenId, tokenId);
+        registryMap.put(tokenId, new StdLib().serialize(tokenState));
+
         ownerOfMap.put(tokenId, owner.toByteArray());
+
         new StorageMap(ctx, createTokensOfPrefix(owner)).put(tokenId, 1);
 
         increaseBalanceByOne(owner);
         incrementTotalSupplyByOne();
-        onMint.fire(owner, tokenId, properties);
+        onTransfer.fire(null, owner, 1, tokenId);
     }
 
     @Struct
-    static class MyStruct {
+    static class TokenState {
         String name;
         String image;
-        String description;
-    }
-
-
-    public static void mintNeoLine(Hash160 owner,Object data) {
-        MyStruct myData = (MyStruct) data;
-        Integer tokenNO = totalSupply() + 1;
-        ByteString tokenId = new ByteString(tokenNO);
-        if (!Runtime.checkWitness(contractOwner())) {
-            fireErrorAndAbort("No authorization.", "mint");
-        }
-        propNameMap.put(tokenId, myData.name);
-        propDescriptionMap.put(tokenId, myData.description);
-        propImageMap.put(tokenId, myData.image);
-
-        registryMap.put(tokenId, tokenId);
-        ownerOfMap.put(tokenId, owner.toByteArray());
-        new StorageMap(ctx, createTokensOfPrefix(owner)).put(tokenId, 1);
-
-        increaseBalanceByOne(owner);
-        incrementTotalSupplyByOne();
-        onMintNeoLine.fire(owner, tokenId, myData);
-    }
-
-    public static void mintNeoLineStr(Hash160 owner,String name,String image, String description) {
-        Integer tokenNO = totalSupply() + 1;
-        ByteString tokenId = new ByteString(tokenNO);
-        if (!Runtime.checkWitness(contractOwner())) {
-            fireErrorAndAbort("No authorization.", "mint");
-        }
-        propNameMap.put(tokenId, name);
-        propDescriptionMap.put(tokenId, description);
-        propImageMap.put(tokenId, image);
-
-        registryMap.put(tokenId, tokenId);
-        ownerOfMap.put(tokenId, owner.toByteArray());
-        new StorageMap(ctx, createTokensOfPrefix(owner)).put(tokenId, 1);
-
-        increaseBalanceByOne(owner);
-        incrementTotalSupplyByOne();
-        MyStruct myData = new MyStruct();
-        myData.image=image;
-        myData.name=name;
-        myData.description=description;
-        onMintNeoLine.fire(owner, tokenId, myData);
+        String desc;
     }
     // region private helper methods
 
@@ -322,13 +238,11 @@ public class StampToken {
     }
 
     private static void incrementTotalSupplyByOne() {
-        int updatedTotalSupply = contractMap.getInt(totalSupplyKey) + 1;
-        contractMap.put(totalSupplyKey, updatedTotalSupply);
+        Storage.put(Storage.getStorageContext(), totalSupplyKey, totalSupply() + 1);
     }
 
     private static void decrementTotalSupplyByOne() {
-        int updatedTotalSupply = contractMap.getInt(totalSupplyKey) - 1;
-        contractMap.put(totalSupplyKey, updatedTotalSupply);
+        Storage.put(Storage.getStorageContext(), totalSupplyKey, totalSupply() - 1);
     }
 
     private static byte[] createTokensOfPrefix(Hash160 owner) {
@@ -338,6 +252,7 @@ public class StampToken {
     // endregion private helper methods
 
 }
+
 ```
 
 ## 代码分析
