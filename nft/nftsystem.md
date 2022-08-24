@@ -312,7 +312,9 @@ function transfer(tokenid,address) {
 ```
 ## 查询
 输入NEO地址，查询所拥有的NFT
+
 ![](../images/nftsystem/cx.png)
+
 调用`nft.tokensOf`触发合约tokensOf方法返回`tokenId`再通过tokenId去调用`getProperties`查询详情
 ```java
 @RequestMapping("/tokensOf")
