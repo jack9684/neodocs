@@ -71,10 +71,10 @@ BUILD SUCCESSFUL in 26s
 // This sets up the connection to the neo-node of our private network.
 public static Neow3j NEOW3J = Neow3j.build(new HttpService("http://localhost:50012", true));
 //TestNet
-//public static Neow3j NEOW3J = Neow3j.build(new HttpService("http://seed2.neo.org:20332", true));
+//public static Neow3j NEOW3J = Neow3j.build(new HttpService("http://seed1t5.neo.org:20332", true));
 public static final String Jack_PKEY = "3a35e263c1c2d0c9a583f5d87f55de56d25ce5536d7ad4744a954f281b4137b1";
 public static Account cj = Account.fromWIF("KyAs6Hwu6RRi4rZWU3VvosDmPU9Abz7b9DCwmFmrp1JhUYZmc8fh");
-public static  Hash160 ContractHash = new Hash160("f9d9d671380fa8c07d9e62480784ee47acbd67e6");
+public static  Hash160 ContractHash = new Hash160("88076fb39dab509c64423e67a71a0a59e1f758ff");
 ```
 ### 添加 铸造
 添加NFT是通过触发合约中的mint方法来将数据写入区块中。我们提供了JAVA后台和Neoline写入的2种方式，分别对应合约的`mint`方法和`mintNeoLine`。涉及到中文，我们对数据进行了`Base64.Encoder`处理。
@@ -160,20 +160,22 @@ function mint() {
 ```
 注意第二个参数类型是`Array`，对应的合约代码使用了`@Struct`将`Object`进行了强转就可以用`对象.属性`的方法进行访问。
 ```java
- @Struct
-    static class MyStruct {
+    @Struct
+    static class TokenState {
         String name;
         String image;
         String description;
     }
 
-
-    public static void mintNeoLine(Hash160 owner,Object data) {
-        MyStruct myData = (MyStruct) data;
-        ......
-        propNameMap.put(tokenId, myData.name);
-        propDescriptionMap.put(tokenId, myData.description);
-        propImageMap.put(tokenId, myData.image);
+public static void mintNeoLine(Hash160 owner,Object data) {
+    if (!Runtime.checkWitness(contractOwner())) {
+        fireErrorAndAbort("No authorization.", "mint");
+    }
+    TokenState tokenState = (TokenState) data;
+    Integer tokenNO = totalSupply() + 1;
+    ByteString tokenId = new ByteString(tokenNO);
+    registryMap.put(tokenId, new StdLib().serialize(tokenState));
+    .....
 ```     
 或者可以不使用`Array`，改为传递3个String，对应的合约接收参数方法：
 ```java
@@ -185,32 +187,22 @@ public static void mintNeoLineStr(Hash160 owner,String name,String image, String
 ![](../images/nftsystem/nftlist.png)
 通过触发合约的`tokens`方法，获取数据，通过解析获取`tokenid`列表，然后再调用合约`properties`和`ownerOf`来获取详细信息，封装成对象列表返回到前端展示。
 ```java
-    @RequestMapping("/stampList/list")
+   @RequestMapping("/stampList/list")
     @ResponseBody
     public MyResponse list(HttpServletRequest request) {
         List<TokenInfo> tlist = new ArrayList<TokenInfo>();
         try {
             NonFungibleToken nft = new NonFungibleToken(Constants.ContractHash,Constants.NEOW3J);
-            List<StackItem> gg =nft.callFunctionReturningIterator("tokens",new ContractParameter[0]);
+            //List<StackItem> gg = nft.callFunctionAndUnwrapIterator("tokens",asList(new ContractParameter[0]),20);
+            List<StackItem> gg = nft.callFunctionAndTraverseIterator("tokens",new ContractParameter[0]);
             for(StackItem l:gg){
-                StructStackItem sStack = (StructStackItem)l;
-                List<StackItem> value = sStack.getValue();
-                int flag = 1;
-                for(StackItem b:value){
-                    ByteStringStackItem bs = (ByteStringStackItem)b;
-                    if(flag==2){
-                        flag=1;
-                    }else{
-                        //tokenid
-                        String tid =  bs.getInteger().toString();
-                        TokenInfo t = service.getProperties(nft,bs.getValue());
-                        Hash160 hash160 = nft.ownerOf(bs.getValue());
-                        t.setOwner(hash160.toAddress());
-                        t.setTokenid(tid);
-                        tlist.add(t);
-                    }
-                    flag++;
-                }
+                ByteStringStackItem sStack = (ByteStringStackItem)l;
+                String tid = sStack.getInteger().toString();
+                TokenInfo t = service.getProperties(nft,sStack.getValue());
+                Hash160 hash160 = nft.ownerOf(sStack.getValue());
+                t.setOwner(hash160.toAddress());
+                t.setTokenid(tid);
+                tlist.add(t);
 
             }
         } catch (Exception e) {
@@ -218,12 +210,15 @@ public static void mintNeoLineStr(Hash160 owner,String name,String image, String
         }
         return MyResponse.buildSuccess(tlist);
     }
+
 ```
 
 `NonFungibleToken`是neow3j封装好的操作NonFungibleToken合约的类，构造函数传递合约地址，节点地址。调用相应的方法就可以与区块链数据进行交互。
 ```java
 NonFungibleToken nft = new NonFungibleToken(Constants.ContractHash,Constants.NEOW3J);
-List<StackItem> gg =nft.callFunctionReturningIterator("tokens",new ContractParameter[0]);
+//List<StackItem> gg = nft.callFunctionAndUnwrapIterator("tokens",asList(new ContractParameter[0]),20);
+List<StackItem> gg = nft.callFunctionAndTraverseIterator("tokens",new ContractParameter[0]);
+
 ```
 `getProperties`方法触发合约的`properties`方法读取详情数据，调用`nft.properties(l)`。
 ```java
@@ -332,12 +327,15 @@ public MyResponse tokensOf(String address) {
         Account account = Account.fromAddress(address);
 
         NonFungibleToken nft = new NonFungibleToken(Constants.ContractHash,Constants.NEOW3J);
-        List<byte[]> list = nft.tokensOf(account.getScriptHash());
+        Iterator<byte[]> ilist = nft.tokensOf(account.getScriptHash());
+        List<byte[]> list = ilist.traverse(100);
+        ilist.terminateSession();
         for(byte[] l:list){
             BigInteger bigInteger =  Numeric.toBigInt(l);
             TokenInfo tokenInfo = getProperties(nft,l);
             tokenInfo.setTokenid(bigInteger.intValue()+"");
             tlist.add(tokenInfo);
+            System.out.println(bigInteger.intValue());
         }
 
     }catch (Exception e){

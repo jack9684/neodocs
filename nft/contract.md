@@ -15,7 +15,7 @@ git checkout quickstart-tutorial
 在`build.gradle`文件中,`className`是对应你的合约代码的位置，如下配置的含义是，将对`HelloWorldSmartContract.java`进行编译
 ```java
 neow3jCompiler {
-    className = "com.axlabs.helloworld.HelloWorldSmartContract"
+    className = "com.axlabs.boilerplate.HelloWorldSmartContract"
 }
 ```
 控制台运行`gradlew neow3jCompile`命令,在对应的目录下，你可以看到编译好的合约文件。得到编译的合约文件，你需要手动去进行部署发布，实际操作中，我们会通过代码直接编译发布更方便。
