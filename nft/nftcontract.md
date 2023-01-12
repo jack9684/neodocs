@@ -1,5 +1,5 @@
 # NEP-11 (NFT)合约开发
-
+接下介绍合约的开发，我们在上章中的样板项目中进行合约开发，在HelloWorldSmartContract.java同级目录中创建我们自己的java合约文件StampToken.java
 [这是nep-11的规范](https://github.com/neo-project/proposals/blob/master/nep-11.mediawiki)一定要遵守。
 ## 完整代码
 ```java

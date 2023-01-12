@@ -1,8 +1,6 @@
 # 下载合约框架
 ```bash
-git clone https://github.com/neow3j/neow3j-boilerplate.git
-cd neow3j-boilerplate
-git checkout quickstart-tutorial
+git clone https://github.com/neow3j/neow3j-boilerplate-contracts.git
 ```
 # 编译和发布合约到NeoExpress
 
@@ -18,6 +16,12 @@ neow3jCompiler {
     className = "com.axlabs.boilerplate.HelloWorldSmartContract"
 }
 ```
+>因为我们在StampToken中使用了中文注释，编译的时候会有编码问题，可以在`build.gradle`文件中添加
+
+```java
+[compileJava, compileTestJava]*.options*.encoding = 'UTF-8'
+```
+
 控制台运行`gradlew neow3jCompile`命令,在对应的目录下，你可以看到编译好的合约文件。得到编译的合约文件，你需要手动去进行部署发布，实际操作中，我们会通过代码直接编译发布更方便。
 
 ![](../images/nft/contract2.png)
@@ -33,14 +37,16 @@ neow3jCompiler {
 
 在`Deployment.java`
 ```java
-    private static final String ALICE_WIF = "KzrHihgvHGpF9urkSbrbRcgrxSuVhpDWkSfWvSg97pJ5YgbdHKCQ";
-    private static final String NODE = "http://localhost:50012";
+private static final String ALICE_WIF = "KzrHihgvHGpF9urkSbrbRcgrxSuVhpDWkSfWvSg97pJ5YgbdHKCQ";
+private static final String NODE = "http://localhost:50012";
 ```
 - 文件中需要修改`ALICE_WIF`为对应的你的部署合约账户的私钥。
 - `NODE`为对应的节点地址，当前是配置的本地私有节点地址，后期可以改为测试网地址，主网地址。
+
 ```java
-     CompilationUnit res = new Compiler().compile(HelloWorldSmartContract.class.getCanonicalName(), substitutions);
+CompilationUnit res = new Compiler().compile(HelloWorldSmartContract.class.getCanonicalName(), substitutions);
 ```
+
 `HelloWorldSmartContract.class.getCanonicalName()`以后修改为自己编写的新合约JAVA类，我们第一次发布就先用默认的`HelloWorldSmartContract.java`。
 
 ### 从NeoExpress中获取Gas

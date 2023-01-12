@@ -9,11 +9,14 @@
 
   - [neoexpress介绍](neoexpress/introduction.md)
   - [安装](neoexpress/setup.md)
+  - [成果展示](neoexpress/video.md)
 
 - NFT合约开发与调用
 
   - [项目介绍](nft/introduction.md)
-  - [合约部署](nft/contract.md)
+  - 合约部署
+    - [合约部署](nft/contract.md)
+    - [成果展示](nft/contractvideo.md)
   - [合约开发](nft/nftcontract.md)
   - [应用开发](nft/nftsystem.md)
   - [发布到测试网,主网](nft/nftdeploy.md)

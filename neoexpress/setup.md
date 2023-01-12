@@ -7,7 +7,11 @@
 
 ![](../images/neoexpress/plugin1.png) 
 
-3. 安装完毕后，点击N3，然后启动私有节点，以后我们都可以在这个私有节点上，进行本地开发调试。
+3. 安装完毕后，点击N3如果还没创建目录，先创建目录
+ 
+![](../images/neoexpress/openfolder.png) 
+
+4. 然后启动私有节点点击`Create a new Neo Express Instance`，选择节点数为1.以后我们都可以在这个私有节点上，进行本地开发调试。
 这个时候已经可以看到启动成功了，发布的服务地址是127.0.0.1:50012
 
 ![](../images/neoexpress/devtracker.png) 
