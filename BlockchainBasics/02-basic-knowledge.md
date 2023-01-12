@@ -517,7 +517,7 @@ signers 中余下的字段定义了签名的作用范围。当 checkwitness 用�
 
 系统费用取决于交易脚本的大小，数量和 NeoVM 指令类型。每一个指令所对应的费用，请参考[opcode 费用](../虚拟机#费用)。Neo N3 取消了每笔交易 10 GAS 的免费额度，系统费用总额受合约脚本的指令数量和指令类型影响。计算公式如下所示：
 
-![](../images/transaction/system_fee.png)
+![](../images/BlockchainBasics/system_fee.png)
 
 其中，_OpcodeSet_ 为指令集，𝑂𝑝𝑐𝑜𝑑𝑒𝑃𝑟𝑖𝑐𝑒<sub>𝑖</sub>为第 _i_ 种指令的费用，𝑛<sub>𝑖</sub>为第 _i_ 种指令在合约脚本中的执行次数。
 
@@ -525,7 +525,7 @@ signers 中余下的字段定义了签名的作用范围。当 checkwitness 用�
 
 网络费是用户向 Neo 网络提交交易时支付的费用，作为共识节点的出块奖励。每笔交易的网络费存在一个基础值，用户支付的网络费需要大于或等于此基础值，否则交易无法通过验证。基础网络费计算公式如下所示：
 
-![network fee](../images/transaction/network_fee.png)
+![network fee](../images/BlockchainBasics/network_fee.png)
 
 其中，*VerificationCost*为虚拟机验证交易签名执行的指令相对应的费用，*tx.Length*为交易数据的字节长度，*FeePerByte*为交易每字节的费用，目前为 0.00001GAS。
 
