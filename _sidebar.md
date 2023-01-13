@@ -4,7 +4,9 @@
   - [基本概念](BlockchainBasics/02-basic-knowledge.md)
   - [共识机制](BlockchainBasics/03-consensus-alogrithm.md)
   - [智能合约](BlockchainBasics/04-smart-contract.md)
-
+- 搭建私链
+  - [搭建多节点私链](privatechain/privatechain.md)
+  - [成果展示](privatechain/introduction.md)
 - NEO-Express的安装使用
 
   - [neoexpress介绍](neoexpress/introduction.md)
